@@ -8,25 +8,26 @@ void create_scheduler(FILE* file, char* algo) {
 	int plist_size     = 0;
 
 	process_info *processes = malloc(sizeof(*processes) * plist_size);
-
-	while (!feof(file)){
-		process_info process;
-		fscanf(file, "%d %d %d %d", &process.pid, &process.arrival_t, &process.service_t, &process.priority);
-
+	process_info process;
+	while (fscanf(file, "%d %d %d %d",
+		   &process.pid, &process.arrival_t,
+		   &process.service_t, &process.priority) != EOF){
+		/* Expand processes array if needed */
 		if (plist_size == plist_capacity){
 			plist_capacity = plist_capacity * 2;
 			processes = realloc(processes, plist_capacity * sizeof(*processes));
 			assert(processes != NULL);
 		}
-
 		processes[plist_size] = process;
 		plist_size++;
 	}
 
+
+
 	/* Create Scheduler */
 	if (strcmp(algo, "CFS") == 0){
 		fprintf(stdout, "Linux Completely Fair Scheduling Running\n");
-		run_cfs(processes);
+		run_cfs(processes, plist_size);
 	} else if (strcmp(algo, "RR") == 0){
 		fprintf(stdout, "Round Robin Scheduling Running\n");
 	} else {

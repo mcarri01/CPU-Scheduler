@@ -10,7 +10,7 @@ CC = gcc # The compiler being used
 
 # Compile flags
 
-CFLAGS = -g -std=gnu99 -Wall -Wextra -Werror -Wfatal-errors -pedantic
+CFLAGS = -g -lm -std=gnu99 -Wall -Wextra -Werror -Wfatal-errors -pedantic
 
 
 ############### Rules ###############
@@ -24,8 +24,8 @@ all: scheduler
 	$(CC) $(CFLAGS) -c $< -o $@
 
 ## Linking step (.o -> executable program)
-scheduler: scheduler.o param_structures.o simulator.o CFS.o param_structures.o
-	$(CC) -o scheduler scheduler.o  param_structures.o simulator.o CFS.o $(CFLAGS) 
+scheduler: scheduler.o simulator.o CFS.o 
+	$(CC) -o scheduler scheduler.o simulator.o CFS.o  $(CFLAGS) 
 
 
 clean:
