@@ -24,8 +24,8 @@ all: scheduler
 	$(CC) $(CFLAGS) -c $< -o $@
 
 ## Linking step (.o -> executable program)
-scheduler: scheduler.o simulator.o
-	$(CC) -o scheduler scheduler.o simulator.o $(CFLAGS) 
+scheduler: scheduler.o param_structures.o simulator.o CFS.o param_structures.o
+	$(CC) -o scheduler scheduler.o  param_structures.o simulator.o CFS.o $(CFLAGS) 
 
 
 clean:

@@ -1,5 +1,3 @@
-#include <stdlib.h>
-#include <stdio.h>
 #include "simulator.h"
 
 
@@ -16,7 +14,17 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Too many arguments\n");
 		exit(EXIT_FAILURE);
 	}
-	create_schedule(argv[1]);
-	(void)argv;
+
+	FILE *fp = fopen(argv[1], "r");
+	if (fp == NULL) {
+		fprintf(stderr, "Error opening input file\n");
+		exit(EXIT_FAILURE);
+	}
+
+
+	create_scheduler(fp, argv[2]);
+
+	fclose(fp);
+
 	return EXIT_SUCCESS;
 }

@@ -1,13 +1,9 @@
-#include <stdlib.h>
-#include <stdio.h>
+#ifndef _SIMULATOR_H
+#define _SIMULATOR_H
 
-typedef struct process_info {
+#include "CFS.h"
 
-	int pid;
-	int arrival_t;
-	int service_t;
-	int priority;
+void create_scheduler(FILE* file, char* algo);
 
-} process_info;
 
-void create_schedule(char *schedule);
+#endif
