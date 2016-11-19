@@ -11,17 +11,11 @@ void run_cfs(process_info processes[], int num_processes){
 
 
     /* Initialize RB Tree */
-    struct rb_tree *tree = rb_tree_create(my_cmp_cb);
+    struct rb_tree *tree = rb_tree_create(my_cmp_cb, my_idcmp_cb);
     if (tree == NULL) {
 		fprintf(stderr, "Error: Red Black Tree for Ready Queue unable to initialize.\n");
+		exit(EXIT_FAILURE);
 	}
-
-
-
-
-
-
-
     /* ------------------ */
 
 
@@ -63,7 +57,7 @@ void run_cfs(process_info processes[], int num_processes){
 			int sum_weight = 0;
 			struct rb_iter *iter = rb_iter_create();
 			if (iter) {
-	    		for (cfs_pnode *v = rb_iter_last(iter, tree); v; v = rb_iter_prev(iter)){ 
+	    		for (cfs_pnode *v = rb_iter_first(iter, tree); v; v = rb_iter_next(iter)){ 
 	    			printf("summing weight of pid %d\n",v->pid);   
 	    			sum_weight += v->weight;
 	    		}
@@ -91,4 +85,11 @@ int my_cmp_cb (struct rb_tree *self, struct rb_node *node_a, struct rb_node *nod
     cfs_pnode *a = (cfs_pnode *) node_a->value;
     cfs_pnode *b = (cfs_pnode *) node_b->value;
     return (a->weight > b->weight) - (a->weight < b->weight);
+}
+
+int my_idcmp_cb (struct rb_tree *self, struct rb_node *node_a, struct rb_node *node_b) {
+	(void)self;
+    cfs_pnode *a = (cfs_pnode *) node_a->value;
+    cfs_pnode *b = (cfs_pnode *) node_b->value;
+    return (a->pid == b->pid);
 }

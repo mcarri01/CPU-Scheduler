@@ -114,18 +114,19 @@ rb_tree_alloc () {
 }
 
 struct rb_tree *
-rb_tree_init (struct rb_tree *self, rb_tree_node_cmp_f node_cmp_cb) {
+rb_tree_init (struct rb_tree *self, rb_tree_node_cmp_f node_cmp_cb, rb_tree_node_cmp_f idcmp) {
     if (self) {
         self->root = NULL;
         self->size = 0;
-        self->cmp = node_cmp_cb ? node_cmp_cb : rb_tree_node_cmp_ptr_cb;
+        self->cmp = node_cmp_cb;
+        self->idcmp = idcmp;
     }
     return self;
 }
 
 struct rb_tree *
-rb_tree_create (rb_tree_node_cmp_f node_cb) {
-    return rb_tree_init(rb_tree_alloc(), node_cb);
+rb_tree_create (rb_tree_node_cmp_f node_cb, rb_tree_node_cmp_f idcmp) {
+    return rb_tree_init(rb_tree_alloc(), node_cb, idcmp);
 }
 
 void
@@ -250,11 +251,9 @@ rb_tree_insert_node (struct rb_tree *self, struct rb_node *node) {
             // Search down the tree for a place to insert
             while (1) {
                 if (q == NULL) {
-
                     // Insert node at the first null link.
                     p->link[dir] = q = node;
                 } else if (rb_node_is_red(q->link[0]) && rb_node_is_red(q->link[1])) {
-                
                     // Simple red violation: color flip
                     q->red = 1;
                     q->link[0]->red = 0;
@@ -262,7 +261,6 @@ rb_tree_insert_node (struct rb_tree *self, struct rb_node *node) {
                 }
 
                 if (rb_node_is_red(q) && rb_node_is_red(p)) {
-
                     // Hard red violation: rotations necessary
                     int dir2 = t->link[1] == g;
                     if (q == p->link[last]) {
@@ -274,7 +272,7 @@ rb_tree_insert_node (struct rb_tree *self, struct rb_node *node) {
           
                 // Stop working if we inserted a node. This
                 // check also disallows duplicates in the tree
-                if (self->cmp(self, q, node) == 0) {
+                if (self->idcmp(self, q, node)) {
                     break;
                 }
 
@@ -331,7 +329,7 @@ rb_tree_remove_with_cb (struct rb_tree *self, void *value, rb_tree_node_f node_c
       
             // Save the node with matching value and keep
             // going; we'll do removal tasks at the end
-            if (self->cmp(self, q, &node) == 0) {
+            if (self->idcmp(self, q, &node)) {
                 f = q;
             }
 

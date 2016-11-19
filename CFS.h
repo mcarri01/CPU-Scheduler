@@ -12,5 +12,5 @@ void run_cfs(process_info processes[], int num_processes);
 
 /* RB Tree Comparison Function */
 int my_cmp_cb (struct rb_tree *self, struct rb_node *node_a, struct rb_node *node_b);
-
+int my_idcmp_cb (struct rb_tree *self, struct rb_node *node_a, struct rb_node *node_b);
 #endif

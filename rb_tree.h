@@ -57,6 +57,7 @@ struct rb_node {
 struct rb_tree {
     struct rb_node    *root;
     rb_tree_node_cmp_f cmp;
+    rb_tree_node_cmp_f idcmp;
     size_t             size;
     void              *info; // User provided, not used by rb_tree.
 };
@@ -78,8 +79,9 @@ struct rb_node *rb_node_init            (struct rb_node *self, void *value);
 void            rb_node_dealloc         (struct rb_node *self);
 
 struct rb_tree *rb_tree_alloc           ();
-struct rb_tree *rb_tree_create          (rb_tree_node_cmp_f cmp);
-struct rb_tree *rb_tree_init            (struct rb_tree *self, rb_tree_node_cmp_f cmp);
+struct rb_tree *rb_tree_create          (rb_tree_node_cmp_f cmp, rb_tree_node_cmp_f idcmp);
+struct rb_tree *rb_tree_init            (struct rb_tree *self, rb_tree_node_cmp_f node_cmp_cb, 
+                                         rb_tree_node_cmp_f idcmp);
 void            rb_tree_dealloc         (struct rb_tree *self, rb_tree_node_f node_cb);
 void           *rb_tree_find            (struct rb_tree *self, void *value);
 int             rb_tree_insert          (struct rb_tree *self, void *value);
