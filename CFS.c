@@ -63,7 +63,7 @@ void run_cfs(process_info processes[], int num_processes){
 			int sum_weight = 0;
 			struct rb_iter *iter = rb_iter_create();
 			if (iter) {
-	    		for (cfs_pnode *v = rb_iter_first(iter, tree); v; v = rb_iter_next(iter)){ 
+	    		for (cfs_pnode *v = rb_iter_last(iter, tree); v; v = rb_iter_prev(iter)){ 
 	    			printf("summing weight of pid %d\n",v->pid);   
 	    			sum_weight += v->weight;
 	    		}
@@ -74,15 +74,11 @@ void run_cfs(process_info processes[], int num_processes){
 	    	printf("Weight Sum: %d\n", sum_weight);
 	    	rb_iter_dealloc(iter);
 	    }
-	
-
-		
 
 		/* Iterate Time and Sleep Delay */
 		time++;
 		CTICK;
 	}
-
 
 
 	/* Some Freeing Subroutine */
@@ -94,5 +90,5 @@ int my_cmp_cb (struct rb_tree *self, struct rb_node *node_a, struct rb_node *nod
 	(void)self;
     cfs_pnode *a = (cfs_pnode *) node_a->value;
     cfs_pnode *b = (cfs_pnode *) node_b->value;
-    return (a->v_runtime > b->v_runtime) - (a->v_runtime < b->v_runtime);
+    return (a->weight > b->weight) - (a->weight < b->weight);
 }
