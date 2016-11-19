@@ -11,6 +11,15 @@ void run_cfs(process_info processes[], int num_processes){
 
 
     /* Initialize RB Tree */
+    struct rb_tree *tree = rb_tree_create(my_cmp_cb);
+    if (tree == NULL) {
+		fprintf(stderr, "Error: Red Black Tree for Ready Queue unable to initialize.\n");
+	}
+
+
+
+
+
 
 
     /* ------------------ */
@@ -23,14 +32,14 @@ void run_cfs(process_info processes[], int num_processes){
 		/* Linear Scan through general array to find new processes which enters */
 		for(int i = 0; i < num_processes; i++){
 			if(processes[i].arrival_t == time){
-				fprintf(stdout, "%d entered run-queue\n", processes[i].pid);
+				fprintf(stdout, "%d entered run-queue w/ Weight %f\n", processes[i].pid, NICE_TO_WEIGHT(processes[i].priority));
+
 				cfs_pnode *arr_process = malloc(sizeof(*arr_process));
 				arr_process->pid = processes[i].pid;
 				arr_process->remaining_t = processes[i].service_t;
 				arr_process->weight = NICE_TO_WEIGHT(processes[i].priority);
 				arr_process->v_runtime = 0;
 				arr_process->slice_t = 0;
-
 
 				arrival_buf[buf_size] = arr_process;
 				buf_size++;
@@ -41,13 +50,33 @@ void run_cfs(process_info processes[], int num_processes){
 		if (time % TIME_LATENCY == 0){
 			fprintf(stdout, "--- TL Window ---\n");
 			/* Add arrival buffer items into tree */
+			for(int i = 0; i < buf_size; i++){
+				printf("Adding shit in\n");
+				rb_tree_insert(tree, arrival_buf[i]);
+			}
 
+			printf("size of tree: %zu\n", tree->size);
 			/* Clear Arrival Buffer */
-			memset(arrival_buf, 0, (size_t)sizeof(arrival_buf));
     		buf_size = 0;
 
 			/* DFS and assign time slice */
-		}
+			int sum_weight = 0;
+			struct rb_iter *iter = rb_iter_create();
+			if (iter) {
+	    		for (cfs_pnode *v = rb_iter_first(iter, tree); v; v = rb_iter_next(iter)){ 
+	    			printf("summing weight of pid %d\n",v->pid);   
+	    			sum_weight += v->weight;
+	    		}
+	    	} else {
+	    		fprintf(stderr, "Iteration Error in RB tree\n");
+	    	}
+
+	    	printf("Weight Sum: %d\n", sum_weight);
+	    	rb_iter_dealloc(iter);
+	    }
+	
+
+		
 
 		/* Iterate Time and Sleep Delay */
 		time++;
@@ -58,4 +87,12 @@ void run_cfs(process_info processes[], int num_processes){
 
 	/* Some Freeing Subroutine */
 
+}
+
+
+int my_cmp_cb (struct rb_tree *self, struct rb_node *node_a, struct rb_node *node_b) {
+	(void)self;
+    cfs_pnode *a = (cfs_pnode *) node_a->value;
+    cfs_pnode *b = (cfs_pnode *) node_b->value;
+    return (a->v_runtime > b->v_runtime) - (a->v_runtime < b->v_runtime);
 }
