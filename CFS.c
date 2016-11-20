@@ -3,9 +3,10 @@
 #define  NICE_TO_WEIGHT(nice_val) 1024/pow(1.25, nice_val)
 
 
+
 void run_cfs(process_info processes[], int num_processes){
     /* Arrival Buffer */
-    cfs_pnode *arrival_buf[num_processes];
+    cfs_pnode arrival_buf[num_processes];
     memset(arrival_buf, 0, (size_t)sizeof(arrival_buf));
     int buf_size = 0;
 
@@ -17,15 +18,18 @@ void run_cfs(process_info processes[], int num_processes){
 		exit(EXIT_FAILURE);
 	}
     /* ------------------ */
-	int time = -1;
+	int time = 0;
 	while(1){
-		
+
+
+		if (time % TIME_LATENCY == 0){
+			check_arrival_queue(processes, arrival_buf, &buf_size, num_processes, time);
+			tree = compute_schdule(tree, arrival_buf, &buf_size);
+			
+		}
 		if (tree->size == 0){
 			time++;
 	    	CTICK;
-		}
-		if (time % TIME_LATENCY == 0){
-			tree = compute_schdule(tree, arrival_buf, &buf_size);
 		}
 		struct rb_iter *iter = rb_iter_create();
 		if (tree->size > 0) {
@@ -33,18 +37,22 @@ void run_cfs(process_info processes[], int num_processes){
 		    	for (cfs_pnode *v = rb_iter_first(iter, tree); v; v = rb_iter_next(iter)) {
 		    		rb_tree_remove(tree, v);
 		    		int runtime;
-		    		for (runtime= 0; runtime < round(v->slice_t); runtime++) {
+
+		    		for (runtime= 1; runtime <= ceil(v->slice_t); runtime++) {
 		    			printf("<time %d: Process %d running\n", time, v->pid);
 		    			time++;
 		    			CTICK;
-		    			//printf("runtime: %d, remainnig: %f\n", runtime, v->remaining_t);
-   						if (runtime >= round(v->remaining_t)) {
+   						if (runtime >= ceil(v->remaining_t)) {
    							printf("<time %d: Process %d finished.\n", time, v->pid);
    							break;
    						}
+   						if (time % TIME_LATENCY == 0){
+   							check_arrival_queue(processes, arrival_buf, &buf_size, num_processes, time);
+   							tree = compute_schdule(tree, arrival_buf, &buf_size);
+						}
 		    		}
 		    		v->v_runtime += runtime * 1024/v->weight;
-		    		v->remaining_t -= v->slice_t;
+		    		v->remaining_t -= ceil(v->slice_t);
 		    		if (v->remaining_t > 0) {
 	    				rb_tree_insert(tree, v);	
    					}
@@ -52,25 +60,9 @@ void run_cfs(process_info processes[], int num_processes){
 	    	}
 		}
 		else {
-
 	    	printf("<time %d: Currently no process running>\n", time);
 		}
-		/* Linear Scan through general array to find new processes which enters */
-		for(int i = 0; i < num_processes; i++){
-			if(processes[i].arrival_t == time){
-				//fprintf(stdout, "%d entered run-queue w/ Weight %f\n", processes[i].pid, NICE_TO_WEIGHT(processes[i].priority));
-
-				cfs_pnode *arr_process = malloc(sizeof(*arr_process));
-				arr_process->pid = processes[i].pid;
-				arr_process->remaining_t = processes[i].service_t;
-				arr_process->weight = NICE_TO_WEIGHT(processes[i].priority);
-				arr_process->v_runtime = 0;
-				arr_process->slice_t = 0;
-
-				arrival_buf[buf_size] = arr_process;
-				buf_size++;
-			}
-		}
+		rb_iter_dealloc(iter);
 	}
 
 
@@ -83,7 +75,7 @@ int my_cmp_cb (struct rb_tree *self, struct rb_node *node_a, struct rb_node *nod
 	(void)self;
     cfs_pnode *a = (cfs_pnode *) node_a->value;
     cfs_pnode *b = (cfs_pnode *) node_b->value;
-    return (a->weight > b->weight) - (a->weight < b->weight);
+    return (a->v_runtime < b->v_runtime) - (a->v_runtime > b->v_runtime);
 }
 
 int my_idcmp_cb (struct rb_tree *self, struct rb_node *node_a, struct rb_node *node_b) {
@@ -92,14 +84,13 @@ int my_idcmp_cb (struct rb_tree *self, struct rb_node *node_a, struct rb_node *n
     cfs_pnode *b = (cfs_pnode *) node_b->value;
     return (a->pid == b->pid);
 }
-struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *arrival_buf[], int *buf_size) {
+struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *arrival_buf, int *buf_size) {
 	//fprintf(stdout, "--- TL Window ---\n");
 	/* Add arrival buffer items into tree */
 	for(int i = 0; i < *buf_size; i++){
 		//printf("Adding shit in\n");
-		rb_tree_insert(tree, arrival_buf[i]);
+		rb_tree_insert(tree, &arrival_buf[i]);
 	}
-	//printf("size of tree: %zu\n", tree->size);
 	/* Clear Arrival Buffer */
 	*buf_size = 0;
 	/* DFS and assign time slice */
@@ -107,19 +98,30 @@ struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *arrival_buf[], 
 	struct rb_iter *iter = rb_iter_create();
 	if (iter) {
    		for (cfs_pnode *v = rb_iter_first(iter, tree); v; v = rb_iter_next(iter)){ 
-   			//printf("summing weight of pid %d\n",v->pid);   
    			sum_weight += v->weight;
    		}
    	} else {
    		fprintf(stderr, "Iteration Error in RB tree\n");
    	}
-   //	printf("Weight Sum: %f\n", sum_weight);
    	if (iter) {
    		for (cfs_pnode *v = rb_iter_first(iter, tree); v; v = rb_iter_next(iter)) {
-   			//printf("creating timeslice for pid %d, %f, %f\n", v->pid, v->weight, sum_weight);
    			v->slice_t = TIME_LATENCY * (v->weight / sum_weight);
-   			//printf("Timeslice: %f, %f\n", v->slice_t, v->remaining_t);
    		}
    	}
    	return tree;
 }
+ void check_arrival_queue(process_info processes[], cfs_pnode *arrival_buf, int *buf_size, int num_processes, int time) {
+// 	/* Linear Scan through general array to find new processes which enters */
+ 	for (int i = 0; i < num_processes; i++) {
+		if (processes[i].arrival_t <= time && processes[i].arrival_t > time - TIME_LATENCY) {
+			cfs_pnode arr_process;
+			arr_process.pid = processes[i].pid;
+			arr_process.remaining_t = processes[i].service_t;
+			arr_process.weight = NICE_TO_WEIGHT(processes[i].priority);
+			arr_process.v_runtime = 0;
+			arr_process.slice_t = 0;
+			arrival_buf[*buf_size] = arr_process;
+			(*buf_size)++;
+		} 		
+ 	}
+ }
