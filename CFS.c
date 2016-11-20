@@ -6,7 +6,7 @@
 
 void run_cfs(process_info processes[], int num_processes){
     /* Arrival Buffer */
-    cfs_pnode arrival_buf[num_processes];
+    cfs_pnode *arrival_buf[num_processes];
     memset(arrival_buf, 0, (size_t)sizeof(arrival_buf));
     int buf_size = 0;
 
@@ -19,11 +19,16 @@ void run_cfs(process_info processes[], int num_processes){
 	}
     /* ------------------ */
 	int time = 0;
+	int process_count = 0;
 	while(1){
-
+		if (process_count == num_processes) {
+			printf("All processes have finished.\n");
+			exit(EXIT_SUCCESS);
+		}
 		if (time % TIME_LATENCY == 0){
 			check_arrival_queue(processes, arrival_buf, &buf_size, num_processes, time);
 			tree = compute_schdule(tree, arrival_buf, &buf_size);
+			memset(arrival_buf, 0, (size_t)sizeof(arrival_buf));
 		}
 		if (tree->size == 0){
 			time++;
@@ -35,25 +40,41 @@ void run_cfs(process_info processes[], int num_processes){
 		    	for (cfs_pnode *v = rb_iter_first(iter, tree); v; v = rb_iter_next(iter)) {
 		    		rb_tree_remove(tree, v);
 		    		int runtime;
-		    		for (runtime= 1; runtime <= ceil(v->slice_t); runtime++) {
+		    		int finished = 0;
+		    		//printf("slice: %f\n", v->slice_t);
+		    		for (runtime= 0; runtime < round(v->slice_t); runtime++) {
 		    			printf("<time %d: Process %d running\n", time, v->pid);
 		    			time++;
 		    			CTICK;
-		    			//check_arrival_queue(processes, arrival_buf, &buf_size, num_processes, time);
-   						if (runtime >= ceil(v->remaining_t)) {
-   							printf("<time %d: Process %d finished.\n", time, v->pid);
+		    			v->remaining_t--;
+		    			if (time % TIME_LATENCY == 0) {
+		    				break;
+		    			}
+		    			if (v->remaining_t <= 0) {
+		    				printf("<time %d: Process %d finished.\n", time, v->pid);
+   							process_count++;
+   							finished = 1;
+   							//free(v);
    							break;
-   						}
+		    			}
 		    		}
+		    		v->remaining_t += runtime -= v->slice_t;
 		    		v->v_runtime += runtime * 1024/v->weight;
-		    		v->remaining_t -= ceil(v->slice_t);
 		    		if (v->remaining_t > 0) {
-	    				rb_tree_insert(tree, v);	
+		    			arrival_buf[buf_size] = v;
+		    			buf_size++;
+   					}
+   					else if (v->remaining_t <= 0 && finished == 0) {
+   						printf("<time %d: Process %d finished.\n", time, v->pid);
+   							process_count++;
+   							finished = 1;
+   							//free(v);
+   							break;
    					}
 		    	}
 	    	}
 		}
-		else {
+		else if (time % TIME_LATENCY != 0 ){
 	    	printf("<time %d: Currently no process running>\n", time);
 		}
 		rb_iter_dealloc(iter);
@@ -78,12 +99,12 @@ int my_idcmp_cb (struct rb_tree *self, struct rb_node *node_a, struct rb_node *n
     cfs_pnode *b = (cfs_pnode *) node_b->value;
     return (a->pid == b->pid);
 }
-struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *arrival_buf, int *buf_size) {
+struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *arrival_buf[], int *buf_size) {
 	//fprintf(stdout, "--- TL Window ---\n");
 	/* Add arrival buffer items into tree */
 	for(int i = 0; i < *buf_size; i++){
 		//printf("Adding shit in\n");
-		rb_tree_insert(tree, &arrival_buf[i]);
+		rb_tree_insert(tree, arrival_buf[i]);
 	}
 	/* Clear Arrival Buffer */
 	*buf_size = 0;
@@ -104,16 +125,17 @@ struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *arrival_buf, in
    	}
    	return tree;
 }
- void check_arrival_queue(process_info processes[], cfs_pnode *arrival_buf, int *buf_size, int num_processes, int time) {
+ void check_arrival_queue(process_info processes[], cfs_pnode *arrival_buf[], int *buf_size, int num_processes, int time) {
 // 	/* Linear Scan through general array to find new processes which enters */
+ 	//printf("buf size: %d\n", *buf_size);
  	for (int i = 0; i < num_processes; i++) {
-		if (processes[i].arrival_t >= time && processes[i].arrival_t <= time + TIME_LATENCY) {
-			cfs_pnode arr_process;
-			arr_process.pid = processes[i].pid;
-			arr_process.remaining_t = processes[i].service_t;
-			arr_process.weight = NICE_TO_WEIGHT(processes[i].priority);
-			arr_process.v_runtime = 0;
-			arr_process.slice_t = 0;
+		if (processes[i].arrival_t <= time && processes[i].arrival_t > time - TIME_LATENCY) {
+			cfs_pnode *arr_process = malloc(sizeof(*arr_process));
+			arr_process->pid = processes[i].pid;
+			arr_process->remaining_t = processes[i].service_t;
+			arr_process->weight = NICE_TO_WEIGHT(processes[i].priority);
+			arr_process->v_runtime = 0;
+			arr_process->slice_t = 0;
 			arrival_buf[*buf_size] = arr_process;
 			(*buf_size)++;
 		} 		

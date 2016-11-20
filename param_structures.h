@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <assert.h>
 #include <string.h>
+#include <math.h>
 
 /* Delay Macros */
 #define CTICK sleep(1)
