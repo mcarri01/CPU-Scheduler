@@ -19,6 +19,11 @@ void run_cfs(process_info processes[], int num_processes){
     /* ------------------ */
 	int time = -1;
 	while(1){
+		
+		if (tree->size == 0){
+			time++;
+	    	CTICK;
+		}
 		if (time % TIME_LATENCY == 0){
 			tree = compute_schdule(tree, arrival_buf, &buf_size);
 		}
@@ -37,8 +42,6 @@ void run_cfs(process_info processes[], int num_processes){
    							printf("<time %d: Process %d finished.\n", time, v->pid);
    							break;
    						}
-
-	
 		    		}
 		    		v->v_runtime += runtime * 1024/v->weight;
 		    		v->remaining_t -= v->slice_t;
@@ -49,14 +52,9 @@ void run_cfs(process_info processes[], int num_processes){
 	    	}
 		}
 		else {
-			time++;
-	    	CTICK;
+
 	    	printf("<time %d: Currently no process running>\n", time);
 		}
-
-		
-		
-
 		/* Linear Scan through general array to find new processes which enters */
 		for(int i = 0; i < num_processes; i++){
 			if(processes[i].arrival_t == time){
@@ -73,8 +71,6 @@ void run_cfs(process_info processes[], int num_processes){
 				buf_size++;
 			}
 		}
-
-
 	}
 
 
