@@ -21,11 +21,9 @@ void run_cfs(process_info processes[], int num_processes){
 	int time = 0;
 	while(1){
 
-
 		if (time % TIME_LATENCY == 0){
 			check_arrival_queue(processes, arrival_buf, &buf_size, num_processes, time);
 			tree = compute_schdule(tree, arrival_buf, &buf_size);
-			
 		}
 		if (tree->size == 0){
 			time++;
@@ -37,19 +35,15 @@ void run_cfs(process_info processes[], int num_processes){
 		    	for (cfs_pnode *v = rb_iter_first(iter, tree); v; v = rb_iter_next(iter)) {
 		    		rb_tree_remove(tree, v);
 		    		int runtime;
-
 		    		for (runtime= 1; runtime <= ceil(v->slice_t); runtime++) {
 		    			printf("<time %d: Process %d running\n", time, v->pid);
 		    			time++;
 		    			CTICK;
+		    			//check_arrival_queue(processes, arrival_buf, &buf_size, num_processes, time);
    						if (runtime >= ceil(v->remaining_t)) {
    							printf("<time %d: Process %d finished.\n", time, v->pid);
    							break;
    						}
-   						if (time % TIME_LATENCY == 0){
-   							check_arrival_queue(processes, arrival_buf, &buf_size, num_processes, time);
-   							tree = compute_schdule(tree, arrival_buf, &buf_size);
-						}
 		    		}
 		    		v->v_runtime += runtime * 1024/v->weight;
 		    		v->remaining_t -= ceil(v->slice_t);
@@ -113,7 +107,7 @@ struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *arrival_buf, in
  void check_arrival_queue(process_info processes[], cfs_pnode *arrival_buf, int *buf_size, int num_processes, int time) {
 // 	/* Linear Scan through general array to find new processes which enters */
  	for (int i = 0; i < num_processes; i++) {
-		if (processes[i].arrival_t <= time && processes[i].arrival_t > time - TIME_LATENCY) {
+		if (processes[i].arrival_t >= time && processes[i].arrival_t <= time + TIME_LATENCY) {
 			cfs_pnode arr_process;
 			arr_process.pid = processes[i].pid;
 			arr_process.remaining_t = processes[i].service_t;
