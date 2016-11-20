@@ -41,8 +41,7 @@ void run_cfs(process_info processes[], int num_processes){
 		    		rb_tree_remove(tree, v);
 		    		int runtime;
 		    		int finished = 0;
-		    		//printf("slice: %f\n", v->slice_t);
-		    		for (runtime= 0; runtime < round(v->slice_t); runtime++) {
+		    		for (runtime= 0; runtime <= round(v->slice_t); runtime++) {
 		    			printf("<time %d: Process %d running\n", time, v->pid);
 		    			time++;
 		    			CTICK;
@@ -79,15 +78,12 @@ void run_cfs(process_info processes[], int num_processes){
 		}
 		rb_iter_dealloc(iter);
 	}
-
-
 	/* Some Freeing Subroutine */
-
 }
 
 
 int my_cmp_cb (struct rb_tree *self, struct rb_node *node_a, struct rb_node *node_b) {
-	(void)self;
+	 (void)self;
     cfs_pnode *a = (cfs_pnode *) node_a->value;
     cfs_pnode *b = (cfs_pnode *) node_b->value;
     return (a->v_runtime < b->v_runtime) - (a->v_runtime > b->v_runtime);
@@ -120,7 +116,10 @@ struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *arrival_buf[], 
    	}
    	if (iter) {
    		for (cfs_pnode *v = rb_iter_first(iter, tree); v; v = rb_iter_next(iter)) {
+
    			v->slice_t = TIME_LATENCY * (v->weight / sum_weight);
+		    	printf("slice: %f of %d\n", v->slice_t, v->pid);
+
    		}
    	}
    	return tree;
