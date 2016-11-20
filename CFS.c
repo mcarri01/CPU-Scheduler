@@ -73,7 +73,7 @@ void run_cfs(process_info processes[], int num_processes){
 	    			printf("Timeslice: %f, %d\n", v->slice_t, v->remaining_t);
 	    			rb_tree_remove(tree, v);
 	    			v->remaining_t -= v->slice_t;
-	    			v->v_runtime += v->slice_t;
+	    			v->v_runtime += v->slice_t * 1024 / v->weight;
 	    			if (v->remaining_t >= 0) {
 			    		rb_tree_insert(tree, v);	
 	    			}
