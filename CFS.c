@@ -66,7 +66,19 @@ void run_cfs(process_info processes[], int num_processes){
 	    	}
 
 	    	printf("Weight Sum: %d\n", sum_weight);
-	    	rb_iter_dealloc(iter);
+	    	if (iter) {
+	    		for (cfs_pnode *v = rb_iter_first(iter, tree); v; v = rb_iter_next(iter)) {
+	    			printf("creating timeslice for pid %d, %f, %d\n", v->pid, v->weight, sum_weight);
+	    			v->slice_t = TIME_LATENCY * (v->weight / sum_weight);
+	    			printf("Timeslice: %f, %d\n", v->slice_t, v->remaining_t);
+	    			rb_tree_remove(tree, v);
+	    			v->remaining_t -= v->slice_t;
+	    			v->v_runtime += v->slice_t;
+	    			if (v->remaining_t >= 0) {
+			    		rb_tree_insert(tree, v);	
+	    			}
+	    		}
+	    	}
 	    }
 
 		/* Iterate Time and Sleep Delay */
