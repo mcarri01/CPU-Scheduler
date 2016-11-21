@@ -26,8 +26,8 @@ typedef struct process_info {
 
 typedef struct cfs_pnode {
 	int pid;
-	double remaining_t;
 	double weight;
+	double remain_t;
 	double slice_t;
-	double v_runtime;
+	double vrun_t;
 } cfs_pnode;
