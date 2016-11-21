@@ -44,6 +44,7 @@ void run_cfs(process_info processes[], int num_processes){
 		check_arrival_queue(processes, arrival_buf, &buf_size, num_processes, time);
 
 		if (time % TIME_LATENCY == 0){	
+			printf("-----TL-------\n");
 			tree = compute_schdule(tree, arrival_buf, &buf_size);
 			/* Clear Arrival Buffer */
 			memset(arrival_buf, 0, (size_t)sizeof(arrival_buf));
@@ -54,35 +55,45 @@ void run_cfs(process_info processes[], int num_processes){
 
 		/* Run current running process and determine if it needs to run next process */
 		if (curr_running_node){
-			//printf("YEEE BOI, time to do shit\n");
 			printf("<time %d: Process %d running\n", time, curr_running_node->pid);
 			curr_running_node->remain_t--;
 			curr_running_node->run_t++;
 
+			/* Tracking Window Running */
 			float remain_window_t = curr_running_node->slice_t - curr_running_ticks;
 			curr_running_ticks++;
-			if(remain_window_t < 1 && remain_window_t != 0){
+			printf("remaining Time for pid %d is %f\n", curr_running_node->pid, curr_running_node->remain_t);
+			printf("remaining Window for pid %d is %f\n", curr_running_node->pid, remain_window_t);
+			if(curr_running_node->remain_t < 1){
+				if(curr_running_node->remain_t < 0){
+					printf("<time %d: Process %d finished.\n", time, curr_running_node->pid);
+				} else {
+					completed_node_buf = curr_running_node;
+				}
+				float prev_remain_t = curr_running_node->remain_t;
 				curr_running_node->remain_t	= 0;
-				completed_node_buf = curr_running_node;
 				curr_running_node = rb_iter_next(iter);
 				curr_running_ticks = 0;
+				
+				if (curr_running_node) {
+					printf("<time %d: Process %d running\n", time, curr_running_node->pid);
+					curr_running_node->remain_t -= 1-prev_remain_t;
+					curr_running_ticks += 1-prev_remain_t;
+				}
+				process_count++;
+			}else if(remain_window_t < 1){
+				curr_running_node = rb_iter_next(iter);
+				curr_running_ticks = 0;
+				
 				if (curr_running_node) {
 					printf("<time %d: Process %d running\n", time, curr_running_node->pid);
 					curr_running_node->remain_t -= 1-remain_window_t;
+					curr_running_ticks += 1-remain_window_t;
 				}
-				process_count++;
-				
+			}		
+		} 
 
-			} else if (remain_window_t == 0){
-				printf("<time %d: Process %d finished.\n", time, curr_running_node->pid);
-				process_count++;
-				curr_running_node = rb_iter_next(iter);
-				curr_running_ticks = 0;
-				if (curr_running_node) {
-					printf("<time %d: Process %d running\n", time, curr_running_node->pid);
-				}
-			}
-		} else {
+		else if (curr_running_node == NULL) {
 			printf("<time %d: Currently no process running>\n", time);
 		}
 
