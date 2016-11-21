@@ -60,18 +60,27 @@ void run_cfs(process_info processes[], int num_processes){
 			curr_running_node->run_t++;
 
 			float remain_window_t = curr_running_node->slice_t - curr_running_ticks;
+			curr_running_ticks++;
 			if(remain_window_t < 1 && remain_window_t != 0){
+				curr_running_node->remain_t	= 0;
 				completed_node_buf = curr_running_node;
 				curr_running_node = rb_iter_next(iter);
 				curr_running_ticks = 0;
-				printf("<time %d: Process %d running\n", time, curr_running_node->pid);
-				curr_running_node->remain_t -= 1-remain_window_t;
+				if (curr_running_node) {
+					printf("<time %d: Process %d running\n", time, curr_running_node->pid);
+					curr_running_node->remain_t -= 1-remain_window_t;
+				}
+				process_count++;
+				
+
 			} else if (remain_window_t == 0){
 				printf("<time %d: Process %d finished.\n", time, curr_running_node->pid);
 				process_count++;
 				curr_running_node = rb_iter_next(iter);
 				curr_running_ticks = 0;
-				printf("<time %d: Process %d running\n", time, curr_running_node->pid);
+				if (curr_running_node) {
+					printf("<time %d: Process %d running\n", time, curr_running_node->pid);
+				}
 			}
 		} else {
 			printf("<time %d: Currently no process running>\n", time);
@@ -93,9 +102,12 @@ struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *arrival_buf[], 
 	struct rb_iter *iter = rb_iter_create();
 	if (iter) {
 		for (cfs_pnode *v = rb_iter_first(iter, tree); v; v = rb_iter_next(iter)){
-			v->vrun_t = v->run_t * (1024/v->weight);
-			arrival_buf[*buf_size] = v;
-			(*buf_size)++;
+			if (v->remain_t != 0) {
+				v->vrun_t = v->run_t * (1024/v->weight);
+				arrival_buf[*buf_size] = v;
+				(*buf_size)++;
+			}
+			
 		}
 	} else {
 		fprintf(stderr, "Iteration Error in RB tree\n");
@@ -108,7 +120,6 @@ struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *arrival_buf[], 
 		//printf("Adding shit in\n");
 		rb_tree_insert(tree, arrival_buf[i]);
 	}
-	printf("Tree size: %zu\n", tree->size);
 	/* DFS and assign time slice */
 	double sum_weight = 0;
 	if (iter) {
@@ -117,7 +128,7 @@ struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *arrival_buf[], 
    		}
    		for (cfs_pnode *v = rb_iter_first(iter, tree); v; v = rb_iter_next(iter)) {
    			v->slice_t = TIME_LATENCY * (v->weight / sum_weight);
-		    printf("slice: %f of %d\n", v->slice_t, v->pid);
+		    //printf("slice: %f of %d\n", v->slice_t, v->pid);
    		}
    	} else {
    		fprintf(stderr, "Iteration Error in RB tree\n");
