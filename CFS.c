@@ -78,10 +78,7 @@ void run_cfs(process_info processes[], int num_processes){
 				clock_ticks = 0;
 	
 			}
-			
-
 		} 
-
 		else if (curr_running_node == NULL) {
 			printf("<time %d: Currently no process running>\n", total_t);
 		}
