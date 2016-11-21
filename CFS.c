@@ -5,8 +5,10 @@
 void run_cfs(process_info processes[], int num_processes){
     /* Arrival Buffer */
     cfs_pnode *arrival_buf[num_processes];
+    cfs_pnode *executed_buf[num_processes];
     memset(arrival_buf, 0, (size_t)sizeof(arrival_buf));
     int buf_size = 0;
+    int exec_size = 0;
 
     /* Initialize RB Tree */
     struct rb_tree *tree = rb_tree_create(my_cmp_cb, my_idcmp_cb);
@@ -34,7 +36,7 @@ void run_cfs(process_info processes[], int num_processes){
 
 	while(1){
 		if (process_count == num_processes){
-			print_results(CPU_t, total_t, tree, num_processes);
+			print_results(CPU_t, total_t, tree, executed_buf, exec_size, num_processes);
 			free_shit();
 			exit(EXIT_SUCCESS);
 		}
@@ -42,7 +44,7 @@ void run_cfs(process_info processes[], int num_processes){
 
 		if (total_t % TIME_LATENCY == 0){	
 			//printf("-----TL-------\n");
-			tree = compute_schdule(tree, arrival_buf, &buf_size);
+			tree = compute_schdule(tree, executed_buf, &exec_size, arrival_buf, &buf_size);
 			/* Clear Arrival Buffer */
 			memset(arrival_buf, 0, (size_t)sizeof(arrival_buf));
 			buf_size = 0;
@@ -61,10 +63,10 @@ void run_cfs(process_info processes[], int num_processes){
 
 			if(curr_running_node->remain_t < 1){
 				total_t++;
+				curr_running_node->finish_t = total_t;
 				printf("<time %d: Process %d finished>\n", total_t, curr_running_node->pid);
 				total_t--;	
 				curr_running_node->remain_t	= 0;
-				curr_running_node->finish_t = total_t;
 				curr_running_node = rb_iter_next(iter);
 				clock_ticks = 0;
 				//remain_window_t = curr_running_node->slice_t;
@@ -93,7 +95,7 @@ void run_cfs(process_info processes[], int num_processes){
 }
 
 
-struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *arrival_buf[], int *buf_size) {
+struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *executed_buf[], int *exec_size, cfs_pnode *arrival_buf[], int *buf_size) {
 	/* Clear the Tree */
 	struct rb_iter *iter = rb_iter_create();
 	if (iter) {
@@ -102,6 +104,9 @@ struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *arrival_buf[], 
 				v->vrun_t = v->run_t * (1024/v->weight);
 				arrival_buf[*buf_size] = v;
 				(*buf_size)++;
+			} else {
+				executed_buf[*exec_size] = v;
+				(*exec_size)++;
 			}
 			
 		}
@@ -124,7 +129,7 @@ struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *arrival_buf[], 
    		}
    		for (cfs_pnode *v = rb_iter_first(iter, tree); v; v = rb_iter_next(iter)) {
    			v->slice_t = TIME_LATENCY * (v->weight / sum_weight);
-		    printf("slice: %f of %d\n", v->slice_t, v->pid);
+		    //printf("slice: %f of %d\n", v->slice_t, v->pid);
    		}
    	} else {
    		fprintf(stderr, "Iteration Error in RB tree\n");
@@ -168,16 +173,20 @@ int my_idcmp_cb (struct rb_tree *self, struct rb_node *node_a, struct rb_node *n
     cfs_pnode *b = (cfs_pnode *) node_b->value;
     return (a->pid == b->pid);
 }
-void print_results(float CPU_t, int total_t, struct rb_tree *tree, int num_processes) {
+void print_results(float CPU_t, int total_t, struct rb_tree *tree, cfs_pnode *executed_buf[], int exec_size, int num_processes) {
+	
 	printf("****************************\n");
 	printf("All processes have finished.\n");
-	struct rb_iter *iter = rb_iter_create();
 	float TAT = 0;
 	float NTAT = 0;
+	struct rb_iter *iter = rb_iter_create();
+	for (int i = 0; i < exec_size; i++){
+		rb_tree_insert(tree, executed_buf[i]);
+	}
 	if (iter) {
 		for (cfs_pnode *v = rb_iter_first(iter, tree); v; v = rb_iter_next(iter)){
-				TAT += v->finish_t - v->arrival_t;	
-				NTAT += TAT / v->run_t;	
+			TAT += (v->finish_t - v->arrival_t);
+			NTAT += (TAT / v->run_t);
 		}
 	} else {
 		fprintf(stderr, "Iteration Error in RB tree\n");
