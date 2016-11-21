@@ -54,9 +54,10 @@ void run_cfs(process_info processes[], int num_processes){
 
 		/* Run current running process and determine if it needs to run next process */
 		if (curr_running_node){
-			printf("YEEE BOI, time to do shit\n");
+			//printf("YEEE BOI, time to do shit\n");
 			printf("<time %d: Process %d running\n", time, curr_running_node->pid);
-			curr_running_node->remain_t = curr_running_node->remain_t - 1;
+			curr_running_node->remain_t--;
+			curr_running_node->run_t++;
 
 			float remain_window_t = curr_running_node->slice_t - curr_running_ticks;
 			if(remain_window_t < 1 && remain_window_t != 0){
@@ -64,7 +65,7 @@ void run_cfs(process_info processes[], int num_processes){
 				curr_running_node = rb_iter_next(iter);
 				curr_running_ticks = 0;
 				printf("<time %d: Process %d running\n", time, curr_running_node->pid);
-				curr_running_node->remaining_t -= 1-remain_window_t;
+				curr_running_node->remain_t -= 1-remain_window_t;
 			} else if (remain_window_t == 0){
 				printf("<time %d: Process %d finished.\n", time, curr_running_node->pid);
 				process_count++;
@@ -76,11 +77,11 @@ void run_cfs(process_info processes[], int num_processes){
 			printf("<time %d: Currently no process running>\n", time);
 		}
 
-		rb_iter_dealloc(iter);
 
 		time++;
 		CTICK;	
 	}
+	rb_iter_dealloc(iter);
 
 
 	/* Some Freeing Subroutine */
@@ -92,29 +93,24 @@ struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *arrival_buf[], 
 	struct rb_iter *iter = rb_iter_create();
 	if (iter) {
 		for (cfs_pnode *v = rb_iter_first(iter, tree); v; v = rb_iter_next(iter)){
-			v-> 
-
+			v->vrun_t = v->run_t * (1024/v->weight);
+			arrival_buf[*buf_size] = v;
+			(*buf_size)++;
 		}
 	} else {
 		fprintf(stderr, "Iteration Error in RB tree\n");
 	}
-
-
-
-
-
-
-
+	rb_tree_dealloc(tree, NULL);
+	tree = rb_tree_create(my_cmp_cb, my_idcmp_cb);
 
 	/* Add arrival buffer items into tree */
 	for(int i = 0; i < *buf_size; i++){
 		//printf("Adding shit in\n");
 		rb_tree_insert(tree, arrival_buf[i]);
 	}
-
+	printf("Tree size: %zu\n", tree->size);
 	/* DFS and assign time slice */
 	double sum_weight = 0;
-	struct rb_iter *iter = rb_iter_create();
 	if (iter) {
    		for (cfs_pnode *v = rb_iter_first(iter, tree); v; v = rb_iter_next(iter)){ 
    			sum_weight += v->weight;
@@ -126,6 +122,7 @@ struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *arrival_buf[], 
    	} else {
    		fprintf(stderr, "Iteration Error in RB tree\n");
    	}
+   	rb_iter_dealloc(iter);
    	
    	return tree;
 }
@@ -136,10 +133,11 @@ struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *arrival_buf[], 
 		if (processes[i].arrival_t == time) {
 			cfs_pnode *arr_process = malloc(sizeof(*arr_process));
 			arr_process->pid = processes[i].pid;
-			arr_process->remaining_t = processes[i].service_t;
+			arr_process->remain_t = processes[i].service_t;
 			arr_process->weight = NICE_TO_WEIGHT(processes[i].priority);
 			arr_process->vrun_t = 0;
 			arr_process->slice_t = 0;
+			arr_process->run_t = 0;
 			arrival_buf[*buf_size] = arr_process;
 			(*buf_size)++;
 		} 		
