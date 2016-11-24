@@ -37,7 +37,8 @@ void run_cfs(process_info processes[], int num_processes){
 	while(1){
 		if (process_count == num_processes){
 			print_results(CPU_t, total_t, tree, executed_buf, exec_size, num_processes);
-			free_shit();
+			
+			free_shit(processes, iter);
 			exit(EXIT_SUCCESS);
 		}
 		check_arrival_queue(processes, arrival_buf, &buf_size, num_processes, total_t);
@@ -182,16 +183,34 @@ void print_results(float CPU_t, int total_t, struct rb_tree *tree, cfs_pnode *ex
 	}
 	if (iter) {
 		for (cfs_pnode *v = rb_iter_first(iter, tree); v; v = rb_iter_next(iter)){
-			TAT += (v->finish_t - v->arrival_t);
-			NTAT += ((v->finish_t - v->arrival_t) / v->run_t);
+			if (v) {
+				if (v->finish_t && v->arrival_t && v->run_t) {
+					TAT += (v->finish_t - v->arrival_t);
+					NTAT += ((v->finish_t - v->arrival_t) / v->run_t);
+				}
+			}
+
 		}
 	} else {
 		fprintf(stderr, "Iteration Error in RB tree\n");
 	}
-	printf("CPU usage: %.2f%c\n", CPU_t/total_t *  100,'%');
-	printf("Average TAT: %.1f\n", TAT / num_processes);
-	printf("Average NTAT: %.1f\n", NTAT / num_processes);
-}
-void free_shit() {
+	
+	rb_iter_dealloc(iter);
+	rb_tree_dealloc(tree, my_free_test);
 
+	TAT = TAT / num_processes;
+	NTAT = NTAT / num_processes;
+	printf("CPU usage: %.2f%c\n", CPU_t/total_t *  100,'%');
+	printf("Average TAT: %.1f\n", TAT);
+	printf("Average NTAT: %.1f\n", NTAT);
+	printf("****************************\n");
+}
+void free_shit(process_info processes[], struct rb_iter *iter) {
+	free(iter);
+	free(processes);
+}
+void my_free_test(struct rb_tree *self, struct rb_node *test) {
+	(void)self;
+	free(test->value);
+	free(test);
 }
