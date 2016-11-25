@@ -36,7 +36,7 @@ void run_cfs(process_info processes[], int num_processes){
 
 	while(1){
 		if (process_count == num_processes){
-			print_results(CPU_t, total_t, tree, executed_buf, exec_size, num_processes);
+			print_cfs_results(CPU_t, total_t, tree, executed_buf, exec_size, num_processes);
 			
 			free_shit(processes, iter);
 			exit(EXIT_SUCCESS);
@@ -171,7 +171,7 @@ int my_idcmp_cb (struct rb_tree *self, struct rb_node *node_a, struct rb_node *n
     cfs_pnode *b = (cfs_pnode *) node_b->value;
     return (a->pid == b->pid);
 }
-void print_results(float CPU_t, int total_t, struct rb_tree *tree, cfs_pnode *executed_buf[], int exec_size, int num_processes) {
+void print_cfs_results(float CPU_t, int total_t, struct rb_tree *tree, cfs_pnode *executed_buf[], int exec_size, int num_processes) {
 	
 	printf("****************************\n");
 	printf("All processes have finished.\n");

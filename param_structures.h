@@ -34,3 +34,11 @@ typedef struct cfs_pnode {
 	double slice_t;
 	double vrun_t;
 } cfs_pnode;
+
+typedef struct fcfs_pnode {
+	int pid;
+	int service_t;
+	int arrival_t;
+	int finish_t;
+	int run_t;
+} fcfs_pnode;
