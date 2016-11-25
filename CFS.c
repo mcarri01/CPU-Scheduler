@@ -183,13 +183,8 @@ void print_results(float CPU_t, int total_t, struct rb_tree *tree, cfs_pnode *ex
 	}
 	if (iter) {
 		for (cfs_pnode *v = rb_iter_first(iter, tree); v; v = rb_iter_next(iter)){
-			if (v) {
-				if (v->finish_t && v->arrival_t && v->run_t) {
-					TAT += (v->finish_t - v->arrival_t);
-					NTAT += ((v->finish_t - v->arrival_t) / v->run_t);
-				}
-			}
-
+			TAT += (v->finish_t - v->arrival_t);
+			NTAT += ((v->finish_t - v->arrival_t) / v->run_t);
 		}
 	} else {
 		fprintf(stderr, "Iteration Error in RB tree\n");
