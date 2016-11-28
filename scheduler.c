@@ -23,8 +23,5 @@ int main(int argc, char *argv[]) {
 
 
 	create_scheduler(fp, argv[2]);
-
-	fclose(fp);
-
 	return EXIT_SUCCESS;
 }
