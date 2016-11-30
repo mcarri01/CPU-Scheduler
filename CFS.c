@@ -150,7 +150,7 @@ struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *executed_buf[],
 	} else {
 		fprintf(stderr, "Iteration Error in RB tree\n");
 	}
-	rb_tree_dealloc(tree, NULL);
+	rb_tree_dealloc(tree, free_tree_nodes);
 	tree = rb_tree_create(my_cmp_cb, my_idcmp_cb);
 
 	/* Add arrival buffer items into tree */
@@ -158,6 +158,7 @@ struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *executed_buf[],
 		//printf("Adding shit in\n");
 		rb_tree_insert(tree, arrival_buf[i]);
 	}
+
 	/* DFS and assign time slice */
 	double sum_weight = 0;
 	if (iter) {
@@ -246,8 +247,13 @@ void free_shit(process_info processes[], struct rb_iter *iter) {
 }
 
 /* Callback function to free individual nodes when traversing tree */
+void free_tree_nodes(struct rb_tree *self, struct rb_node *node) {
+	(void)self;
+	free(node);
+}
 void my_free_test(struct rb_tree *self, struct rb_node *test) {
 	(void)self;
+	printf("wow\n");
 	free(test->value);
 	free(test);
 }
