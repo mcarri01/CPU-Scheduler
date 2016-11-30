@@ -1,3 +1,25 @@
+/*
+*
+*	CFS.h
+*
+*	Header file for CFS module defining methods to run 
+*	main simulaton loop, along with helper functions to check
+*	the waiting queue for any new processes that are ready-to-run,
+*	updating the red-black tree before each TIME_LATENCY, and printing
+*	results after the simulation. 
+*
+*	In addition, defines two comparison functions used to navigate
+*	the red-black tree when traversing.
+*
+*
+*   by 
+*     	Justin Tze Tsun Lee
+*     	Matthew Carrington-Fair
+*     	Tomer Shapira
+*
+*
+*/
+
 #ifndef _CFS_H
 #define _CFS_H
 
