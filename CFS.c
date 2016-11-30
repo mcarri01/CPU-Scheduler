@@ -1,12 +1,50 @@
+/*
+*	CFS.c
+*   
+*	Implements the CFS module containing the primary functions to
+*	simulate a CFS scheduler.
+*
+*	Operates the main loop to run available ready-to-run processes
+*	appropriately to the CFS algorithm until all processes have finished.
+*	   
+*	Every CTICK, it searches the waiting queue for any proceses that 
+*	are eligible to enter the ready-to-run queue. At the start of every
+*	TIME_LATENCY any processes within the ready-to-run queue have their
+*	time-slices calculated and are placed within a red-black tree by 
+*	comparing virtual runtimes. Processes with the shortest virtual
+*	runtime are selected first to run.
+*
+*	Once all processes are finished, the program deallocs the processes
+*	and the process tree and prints results from the simulation
+*	including % of CPU usage, average turnaround time, and normalized
+*	turnaround time. 
+*
+*
+*
+*   by 
+*     	Justin Tze Tsun Lee
+*     	Matthew Carrington-Fair
+*     	Tomer Shapira
+*
+*
+*/
+
+
 #include  "CFS.h"
 
+/* Macro to convert given priority into a weight for CFS */
 #define  NICE_TO_WEIGHT(nice_val) 1024/pow(1.25, nice_val)
 
+
+
+/* Main routine to schedule processes according to CFS */
 void run_cfs(process_info processes[], int num_processes){
     /* Arrival Buffer */
     cfs_pnode *arrival_buf[num_processes];
+    /* Stores all terminated processes */
     cfs_pnode *executed_buf[num_processes];
     memset(arrival_buf, 0, (size_t)sizeof(arrival_buf));
+    memset(executed_buf, 0, (size_t)sizeof(executed_buf));
     int buf_size = 0;
     int exec_size = 0;
 
@@ -22,7 +60,7 @@ void run_cfs(process_info processes[], int num_processes){
 	float CPU_t = 0;
 	int process_count = 0;
 
-
+	/* Initialize iterator for tree */
 	struct rb_iter *iter = rb_iter_create();
 	if (iter == NULL) {
 			fprintf(stderr, "Iteration Error in RB tree\n");
@@ -30,14 +68,16 @@ void run_cfs(process_info processes[], int num_processes){
 			exit(EXIT_FAILURE);
 	}
 
-
+	/* Set up a pointer that will always keep track of the current running process */
 	cfs_pnode *curr_running_node;
 	int clock_ticks = 0;
 
+	/* Loop only breaks if error or all processes terminate */
 	while(1){
+
+		/* Exit condition*/
 		if (process_count == num_processes){
 			print_cfs_results(CPU_t, total_t, tree, executed_buf, exec_size, num_processes);
-			
 			free_shit(processes, iter);
 			exit(EXIT_SUCCESS);
 		}
@@ -61,7 +101,8 @@ void run_cfs(process_info processes[], int num_processes){
 
 			float window_t = floor(curr_running_node->slice_t) - clock_ticks;
 			clock_ticks++;
-
+			/* Once the remaining time is less than a second, round it down
+			and consider it done */
 			if(curr_running_node->remain_t < 1){
 				total_t++;
 				curr_running_node->finish_t = total_t;
@@ -88,11 +129,9 @@ void run_cfs(process_info processes[], int num_processes){
 	}
 	rb_iter_dealloc(iter);
 
-
-	/* Some Freeing Subroutine */
 }
 
-
+/* Re-adjusts schedule for new time latency, adding processes in ready queue into rb tree */
 struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *executed_buf[], int *exec_size, cfs_pnode *arrival_buf[], int *buf_size) {
 	/* Clear the Tree */
 	struct rb_iter *iter = rb_iter_create();
@@ -136,7 +175,7 @@ struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *executed_buf[],
    	
    	return tree;
 }
-
+/* Each tick checks whether new processes are ready to be run */
  void check_arrival_queue(process_info processes[], cfs_pnode *arrival_buf[], int *buf_size, int num_processes, int total_t) {
   	/* Linear Scan through general array to find new processes which enters */
  	for (int i = 0; i < num_processes; i++) {
@@ -171,6 +210,7 @@ int my_idcmp_cb (struct rb_tree *self, struct rb_node *node_a, struct rb_node *n
     cfs_pnode *b = (cfs_pnode *) node_b->value;
     return (a->pid == b->pid);
 }
+/* Reports average CPU, TAT, NTAT times for processes */ 
 void print_cfs_results(float CPU_t, int total_t, struct rb_tree *tree, cfs_pnode *executed_buf[], int exec_size, int num_processes) {
 	
 	printf("****************************\n");
@@ -204,6 +244,8 @@ void free_shit(process_info processes[], struct rb_iter *iter) {
 	free(iter);
 	free(processes);
 }
+
+/* Callback function to free individual nodes when traversing tree */
 void my_free_test(struct rb_tree *self, struct rb_node *test) {
 	(void)self;
 	free(test->value);

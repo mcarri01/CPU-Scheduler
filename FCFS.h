@@ -1,3 +1,20 @@
+/*
+*
+*	FCFS.h
+*
+*	Header file for FCFS module defining methods to run 
+*	main simulaton loop, along with helper functions to check
+*	the waiting queue for any new processes that are ready-to-run.
+*
+*
+*   by 
+*     	Justin Tze Tsun Lee
+*     	Matthew Carrington-Fair
+*     	Tomer Shapira
+*
+*/
+
+
 #ifndef FCFS_H
 #define FCFS_H
 
