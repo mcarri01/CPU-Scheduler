@@ -63,29 +63,26 @@ void run_cfs(process_info processes[], int num_processes){
 	/* Initialize iterator for tree */
 	struct rb_iter *iter = rb_iter_create();
 	if (iter == NULL) {
-			fprintf(stderr, "Iteration Error in RB tree\n");
-			/* FREE SHIT */
-			exit(EXIT_FAILURE);
+		fprintf(stderr, "Iteration Error in RB tree\n");
+		exit(EXIT_FAILURE);
 	}
 
 	/* Set up a pointer that will always keep track of the current running process */
-	cfs_pnode *curr_running_node;
+	cfs_pnode *curr_running_node = NULL;
 	int clock_ticks = 0;
 
 	/* Loop only breaks if error or all processes terminate */
 	while(1){
 
 		/* Exit condition*/
-		if (process_count == num_processes){
-			print_cfs_results(CPU_t, total_t, tree, executed_buf, exec_size, num_processes);
-			free_shit(processes, iter);
-			exit(EXIT_SUCCESS);
-		}
-		check_arrival_queue(processes, arrival_buf, &buf_size, num_processes, total_t);
+		process_count == num_processes ? 
+			print_cfs_results(CPU_t, total_t, tree, executed_buf, exec_size, num_processes),
+			free_stuff(processes, iter),
+			exit(EXIT_SUCCESS)
+		: check_cfs_queue(processes, arrival_buf, &buf_size, num_processes, total_t);
 
 		if (total_t % TIME_LATENCY == 0){	
-			//printf("-----TL-------\n");
-			tree = compute_schdule(tree, executed_buf, &exec_size, arrival_buf, &buf_size);
+			tree = compute_schedule(tree, executed_buf, &exec_size, arrival_buf, &buf_size);
 			/* Clear Arrival Buffer */
 			memset(arrival_buf, 0, (size_t)sizeof(arrival_buf));
 			buf_size = 0;
@@ -99,11 +96,11 @@ void run_cfs(process_info processes[], int num_processes){
 			curr_running_node->remain_t--;
 			curr_running_node->run_t++;
 
-			float window_t = floor(curr_running_node->slice_t) - clock_ticks;
+			float window_t = round(curr_running_node->slice_t) - clock_ticks;
 			clock_ticks++;
 			/* Once the remaining time is less than a second, round it down
 			and consider it done */
-			if(curr_running_node->remain_t < 1){
+			if(curr_running_node->remain_t  < 1){
 				total_t++;
 				curr_running_node->finish_t = total_t;
 				printf("<time %d: Process %d finished>\n", total_t, curr_running_node->pid);
@@ -132,7 +129,7 @@ void run_cfs(process_info processes[], int num_processes){
 }
 
 /* Re-adjusts schedule for new time latency, adding processes in ready queue into rb tree */
-struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *executed_buf[], int *exec_size, cfs_pnode *arrival_buf[], int *buf_size) {
+struct rb_tree* compute_schedule(struct rb_tree *tree, cfs_pnode *executed_buf[], int *exec_size, cfs_pnode *arrival_buf[], int *buf_size) {
 	/* Clear the Tree */
 	struct rb_iter *iter = rb_iter_create();
 	if (iter) {
@@ -141,21 +138,28 @@ struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *executed_buf[],
 				v->vrun_t = v->run_t * (1024/v->weight);
 				arrival_buf[*buf_size] = v;
 				(*buf_size)++;
+			// v->remain_t != 0 ? v->run_t = v->run_t * (1024/v->weight),
+			// 							arrival_buf[*buf_size] = v,
+			// 							(*buf_size)++
+
+			// 							 : executed_buf[*exec_size] = v,
+			// 							(*exec_size)++;
 			} else {
 				executed_buf[*exec_size] = v;
 				(*exec_size)++;
 			}
 			
 		}
+	
 	} else {
 		fprintf(stderr, "Iteration Error in RB tree\n");
 	}
+
 	rb_tree_dealloc(tree, free_tree_nodes);
 	tree = rb_tree_create(my_cmp_cb, my_idcmp_cb);
 
 	/* Add arrival buffer items into tree */
 	for(int i = 0; i < *buf_size; i++){
-		//printf("Adding shit in\n");
 		rb_tree_insert(tree, arrival_buf[i]);
 	}
 
@@ -167,7 +171,6 @@ struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *executed_buf[],
    		}
    		for (cfs_pnode *v = rb_iter_first(iter, tree); v; v = rb_iter_next(iter)) {
    			v->slice_t = TIME_LATENCY * (v->weight / sum_weight);
-		    //printf("slice: %f of %d\n", v->slice_t, v->pid);
    		}
    	} else {
    		fprintf(stderr, "Iteration Error in RB tree\n");
@@ -177,7 +180,7 @@ struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *executed_buf[],
    	return tree;
 }
 /* Each tick checks whether new processes are ready to be run */
- void check_arrival_queue(process_info processes[], cfs_pnode *arrival_buf[], int *buf_size, int num_processes, int total_t) {
+ void check_cfs_queue(process_info processes[], cfs_pnode *arrival_buf[], int *buf_size, int num_processes, int total_t) {
   	/* Linear Scan through general array to find new processes which enters */
  	for (int i = 0; i < num_processes; i++) {
 		if (processes[i].arrival_t == total_t) {
@@ -197,14 +200,14 @@ struct rb_tree* compute_schdule(struct rb_tree *tree, cfs_pnode *executed_buf[],
  }
 
 
-/* RB Tree defined overload function */
+/* RB Tree defined overload function, used to traverse tree by comparing virtual runtime */
 int my_cmp_cb (struct rb_tree *self, struct rb_node *node_a, struct rb_node *node_b) {
 	 (void)self;
     cfs_pnode *a = (cfs_pnode *) node_a->value;
     cfs_pnode *b = (cfs_pnode *) node_b->value;
     return (a->vrun_t < b->vrun_t) - (a->vrun_t > b->vrun_t);
 }
-
+/* Comparison function to prevent duplicate pids */
 int my_idcmp_cb (struct rb_tree *self, struct rb_node *node_a, struct rb_node *node_b) {
 	(void)self;
     cfs_pnode *a = (cfs_pnode *) node_a->value;
@@ -232,7 +235,7 @@ void print_cfs_results(float CPU_t, int total_t, struct rb_tree *tree, cfs_pnode
 	}
 	
 	rb_iter_dealloc(iter);
-	rb_tree_dealloc(tree, my_free_test);
+	rb_tree_dealloc(tree, free_tree_processes);
 
 	TAT = TAT / num_processes;
 	NTAT = NTAT / num_processes;
@@ -241,19 +244,19 @@ void print_cfs_results(float CPU_t, int total_t, struct rb_tree *tree, cfs_pnode
 	printf("Average NTAT: %.1f\n", NTAT);
 	printf("****************************\n");
 }
-void free_shit(process_info processes[], struct rb_iter *iter) {
+void free_stuff(process_info processes[], struct rb_iter *iter) {
 	free(iter);
 	free(processes);
 }
 
-/* Callback function to free individual nodes when traversing tree */
+/* Apply function to free individual nodes when traversing tree */
 void free_tree_nodes(struct rb_tree *self, struct rb_node *node) {
 	(void)self;
 	free(node);
 }
-void my_free_test(struct rb_tree *self, struct rb_node *test) {
+/* Frees both individual tree nodes and the process node stored as well */
+void free_tree_processes(struct rb_tree *self, struct rb_node *test) {
 	(void)self;
-	printf("wow\n");
 	free(test->value);
 	free(test);
 }
