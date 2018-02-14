@@ -1,30 +1,26 @@
-COMP111 Project 2 README
-Scheduler Simulator Project
+# COMP111 Project 2 README
+## Scheduler Simulator Project
 
 
 Matthew Carrington-Fair		mcarri01
 Tomer Shapira				tshapi02
 Justin Lee					tlee05
 
-Design Overview:
+## Design Overview:
 
 	List of Files:
 			scheduler.c : File containing main
 			simulator.c
 			simulator.h
-			# FCFS #
 			FCFS.h
 			FCFS.c
-			# CFS #
 			CFS.h
 			CFS.c
-			# Universal struct file #
 			param_structures.h
-			# Makefile #
 			Makefile
 
 
-Algorithm Choice:
+## Algorithm Choice:
 
 	We chose to implement FCFS because it would provide a nice contrast to
 	the CFS algorithm. With FCFS, through our input files we find that we 
@@ -40,7 +36,7 @@ Algorithm Choice:
 	would add processes to the run queue as they appear in the
 	original waiting queue in stable order. 
 
-Approach to CFS Algorithm:
+## Approach to CFS Algorithm:
 
 	We first made a queue to hold all of the processes that would be read in from a file. Every clock tick, we would check the queue for a process that had a run-time equal to the timeslice and add it to the "ready" queue. Each TL (time latency), we would check the "ready" queue and pop the processes within it into a RB tree. The RB tree would hold all of the processes to be run during a single TL. The RB tree would pick the process with the lowest virtual runtime and run it for the duration of the timeslice. 
 
@@ -49,14 +45,14 @@ Approach to CFS Algorithm:
 	In our implementation we floor each time-slice and subtract the current running time of a process to determine how much time a process has left to run within a single iteration. We then assume that if a process has less than 1 second left in its service time that it will finish before the next tick, therefore we to print that it finishes execution at the next tick and proceed with the next available process with the lowest virtual runtime. This "rounding down" of timeslices allows all processes that are present within our red black tree to run during a target latency. While these processes also execute at the appropriate time ticks on paper, it occasionally has the side-effect of shrinking actual run-time and leaving empty processor time at the end of a target latency. However, we believe that the output more accurately matches how each process should run within a target latency given its timeslice.
 
 
-Summary of Input Files:
+## Summary of Input Files:
 
 	Our input files each contain 10 processes that have a wide range of arrival and service times. None of the processes run for more than 10 ticks, but they arrive anywhere from time 0 to 20, and priority values ranging from -20 to 19.
 
-Extra Credit:
+## Extra Credit:
 
 	See CFS approach, used red-black tree to store processes that were available to run within a given time latency. 
 
-Additional Comments:
+## Additional Comments:
 
 	DEFINE QUITTING/EXITING GRACEFULLY
